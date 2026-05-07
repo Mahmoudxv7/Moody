@@ -1,92 +1,111 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { getNotes, createNote, deleteNote } from "../services/noteService";
-import { getAssignedPatients } from "../services/therapistService";
-import { getCurrentUser, logout } from "../services/authService";
 
+const initialNotes = [
+  {
+    id: 1,
+    patientInitials: "SJ",
+    patientName: "Sarah Jenkins",
+    patientColor: "initials-pink",
+    date: "APR 24, 2026",
+    text: "Patient reports improved sleep hygiene but continues to experience mild anxiety during evening hours. Discussed grounding techniques and breathing exercises.",
+    tags: ["ANXIETY", "FOLLOW-UP"],
+    tagColors: ["tag-red", "tag-blue"],
+  },
+  {
+    id: 2,
+    patientInitials: "MT",
+    patientName: "Marcus Thorne",
+    patientColor: "initials-orange",
+    date: "APR 22, 2026",
+    text: "Initial intake session. Client is struggling with work-life balance and burnout. Exhibits signs of moderate depressive episode. Recommended daily mood logging.",
+    tags: ["BURNOUT", "INTAKE"],
+    tagColors: ["tag-orange", "tag-gray"],
+  },
+  {
+    id: 3,
+    patientInitials: "ER",
+    patientName: "Elena Rodriguez",
+    patientColor: "initials-purple",
+    date: "APR 19, 2026",
+    text: "Discussed recent family conflict. Elena expressed feeling unheard in social circles. We focused on assertive communication exercises and journaling.",
+    tags: ["RELATIONSHIPS"],
+    tagColors: ["tag-green"],
+  },
+  {
+    id: 4,
+    patientInitials: "DC",
+    patientName: "David Chen",
+    patientColor: "initials-teal",
+    date: "APR 15, 2026",
+    text: "Summary of monthly progress. David has met 3 out of 5 therapeutic goals established last quarter. Resilience scores are up by 15%.",
+    tags: ["REVIEW", "PROGRESS"],
+    tagColors: ["tag-blue", "tag-green"],
+  },
+];
+
+// Settings REMOVED from nav
 const navItems = [
-  { icon: "⊞", label: "Overview",  path: "/therapist",          active: false },
-  { icon: "👤", label: "Patients",  path: "/therapist/patients", active: false },
-  { icon: "📋", label: "Notes",     path: "/therapist/notes",    active: true  },
-  { icon: "⚙",  label: "Settings", path: "#",                   active: false },
+  { icon: "⊞", label: "Overview", path: "/therapist",          active: false },
+  { icon: "👤", label: "Patients", path: "/therapist/patients", active: false },
+  { icon: "📋", label: "Notes",    path: "/therapist/notes",    active: true  },
 ];
 
 export default function TherapistNotes() {
+  const [notes, setNotes]                   = useState(initialNotes);
+  const [search, setSearch]                 = useState("");
+  const [filterPatient, setFilterPatient]   = useState("All Patients");
+  const [showNewNote, setShowNewNote]       = useState(false);
+  const [newNoteText, setNewNoteText]       = useState("");
+  const [newNotePatient, setNewNotePatient] = useState("Sarah Jenkins");
+  const [newNoteTags, setNewNoteTags]       = useState("");
+  const [saveError, setSaveError]           = useState("");
   const navigate = useNavigate();
-  const user     = getCurrentUser();
-
-  const [notes,        setNotes]        = useState([]);
-  const [patients,     setPatients]     = useState([]);
-  const [search,       setSearch]       = useState("");
-  const [showNewNote,  setShowNewNote]  = useState(false);
-  const [newNoteText,  setNewNoteText]  = useState("");
-  const [newPatientId, setNewPatientId] = useState("");
-  const [newTags,      setNewTags]      = useState("");
-  const [loading,      setLoading]      = useState(true);
-  const [saving,       setSaving]       = useState(false);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [notesData, patientsData] = await Promise.all([
-          getNotes(),
-          getAssignedPatients(),
-        ]);
-        setNotes(notesData);
-        setPatients(patientsData);
-        if (patientsData.length > 0) {
-          setNewPatientId(patientsData[0].userID?._id || "");
-        }
-      } catch (err) {
-        console.error("Failed to load notes:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleLogout = () => { logout(); navigate("/"); };
-
-  const handleAddNote = async () => {
-    if (!newNoteText.trim() || !newPatientId) return;
-    try {
-      setSaving(true);
-      const tags = newTags.split(",").map(t => t.trim().toUpperCase()).filter(Boolean);
-      const newNote = await createNote({
-        userID:   newPatientId,
-        noteText: newNoteText,
-        tags,
-      });
-      setNotes([newNote, ...notes]);
-      setNewNoteText("");
-      setNewTags("");
-      setShowNewNote(false);
-    } catch (err) {
-      console.error("Failed to create note:", err);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const filtered = notes.filter(n =>
-    n.noteText?.toLowerCase().includes(search.toLowerCase()) ||
-    n.userID?.fullName?.toLowerCase().includes(search.toLowerCase())
+    n.text.toLowerCase().includes(search.toLowerCase()) ||
+    n.patientName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const tagColorMap = {
-    "ANXIETY":      "tag-red",
-    "FOLLOW-UP":    "tag-blue",
-    "BURNOUT":      "tag-orange",
-    "INTAKE":       "tag-gray",
-    "RELATIONSHIPS":"tag-green",
-    "REVIEW":       "tag-blue",
-    "PROGRESS":     "tag-green",
-    "CLINICAL":     "tag-purple",
-    "STABLE":       "tag-green",
+  const handleAddNote = () => {
+    // Must have note text
+    if (!newNoteText.trim()) {
+      setSaveError("Please write something in the note before saving.");
+      return;
+    }
+    setSaveError("");
+
+    const tags = newNoteTags
+      .split(",")
+      .map(t => t.trim().toUpperCase())
+      .filter(Boolean);
+
+    const newNote = {
+      id: Date.now(),
+      patientInitials: newNotePatient.split(" ").map(w => w[0]).join("").slice(0, 2),
+      patientName: newNotePatient,
+      patientColor: "initials-purple",
+      date: new Date().toLocaleDateString("en-US", {
+        month: "short", day: "2-digit", year: "numeric",
+      }).toUpperCase(),
+      text: newNoteText,
+      tags,
+      tagColors: tags.map(() => "tag-blue"),
+    };
+
+    setNotes([newNote, ...notes]); // add to top
+    setNewNoteText("");
+    setNewNoteTags("");
+    setNewNotePatient("Sarah Jenkins");
+    setShowNewNote(false);
   };
 
-  const initialsColors = ["initials-pink", "initials-orange", "initials-purple", "initials-teal"];
+  const closeForm = () => {
+    setShowNewNote(false);
+    setSaveError("");
+    setNewNoteText("");
+    setNewNoteTags("");
+  };
 
   return (
     <div className="td-root">
@@ -98,14 +117,17 @@ export default function TherapistNotes() {
           <div className="td-sidebar-profile">
             <div className="td-doctor-avatar">👨‍⚕️</div>
             <div className="td-doctor-info">
-              <p className="td-doctor-name">{user?.fullName || "Dr. Smith"}</p>
+              <p className="td-doctor-name">Dr. Smith</p>
               <p className="td-doctor-role">CLINICAL WELLNESS</p>
             </div>
           </div>
           <nav className="td-sidebar-nav">
             {navItems.map((item, i) => (
-              <Link key={i} to={item.path}
-                className={`td-nav-item ${item.active ? "td-nav-active" : ""}`}>
+              <Link
+                key={i}
+                to={item.path}
+                className={`td-nav-item ${item.active ? "td-nav-active" : ""}`}
+              >
                 <span className="td-nav-icon">{item.icon}</span>
                 <span className="td-nav-label">{item.label}</span>
               </Link>
@@ -113,7 +135,10 @@ export default function TherapistNotes() {
           </nav>
         </div>
         <div className="td-sidebar-bottom">
-          <button className="td-new-note-btn" onClick={() => setShowNewNote(true)}>
+          <button
+            className="td-new-note-btn"
+            onClick={() => { setShowNewNote(true); setSaveError(""); }}
+          >
             + New Note
           </button>
         </div>
@@ -122,16 +147,16 @@ export default function TherapistNotes() {
       {/* ── MAIN ── */}
       <main className="td-main">
 
-        {/* Top bar */}
         <div className="td-topbar">
           <h2 className="td-topbar-title">Clinical Notes</h2>
           <div className="td-topbar-right">
-            <button className="db-icon-btn">🔔</button>
-            <button className="td-logout-btn" onClick={handleLogout}>↪ Logout</button>
+            <button className="td-icon-btn">🔔</button>
+            <button className="td-logout-btn" onClick={() => navigate("/login")}>
+              ↪ Logout
+            </button>
           </div>
         </div>
 
-        {/* Content */}
         <div className="td-content">
 
           <div className="tn-header">
@@ -139,7 +164,7 @@ export default function TherapistNotes() {
             <p className="tn-subtitle">Review and manage documentation across your patient list.</p>
           </div>
 
-          {/* Toolbar */}
+          {/* Search + filter */}
           <div className="tn-toolbar">
             <div className="tp-search-wrap" style={{ flex: 1 }}>
               <span className="tp-search-icon">🔍</span>
@@ -151,111 +176,115 @@ export default function TherapistNotes() {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <select className="tn-filter-select">
-              <option>All Patients</option>
-              {patients.map((p, i) => (
-                <option key={i}>{p.userID?.fullName}</option>
-              ))}
-            </select>
+            <div className="tn-filter-wrap">
+              <select
+                className="tn-filter-select"
+                value={filterPatient}
+                onChange={e => setFilterPatient(e.target.value)}
+              >
+                <option>All Patients</option>
+                <option>Sarah Jenkins</option>
+                <option>Marcus Thorne</option>
+                <option>Elena Rodriguez</option>
+                <option>David Chen</option>
+              </select>
+            </div>
             <button className="tn-sort-btn">▼ Sort</button>
           </div>
 
-          {/* New Note form */}
+          {/* ── NEW NOTE FORM ── */}
           {showNewNote && (
             <div className="tn-new-note-form">
               <div className="tn-new-note-header">
                 <h3 className="tn-new-note-title">New Clinical Note</h3>
-                <button className="tn-close-btn" onClick={() => setShowNewNote(false)}>✕</button>
+                <button className="tn-close-btn" onClick={closeForm}>✕</button>
               </div>
 
-              {/* Patient selector */}
               <select
                 className="tn-filter-select"
-                value={newPatientId}
-                onChange={e => setNewPatientId(e.target.value)}
+                value={newNotePatient}
+                onChange={e => { setNewNotePatient(e.target.value); setSaveError(""); }}
               >
-                {patients.map((p, i) => (
-                  <option key={i} value={p.userID?._id}>
-                    {p.userID?.fullName}
-                  </option>
-                ))}
+                <option>Sarah Jenkins</option>
+                <option>Marcus Thorne</option>
+                <option>Elena Rodriguez</option>
+                <option>David Chen</option>
               </select>
 
               <textarea
                 className="tn-new-note-textarea"
                 placeholder="Write your clinical observation..."
                 value={newNoteText}
-                onChange={e => setNewNoteText(e.target.value)}
+                onChange={e => { setNewNoteText(e.target.value); setSaveError(""); }}
               />
 
               <input
                 className="tp-search-input"
                 type="text"
                 placeholder="Tags (comma separated, e.g. Anxiety, Follow-up)"
-                value={newTags}
-                onChange={e => setNewTags(e.target.value)}
+                value={newNoteTags}
+                onChange={e => setNewNoteTags(e.target.value)}
               />
 
+              {/* Error shown when Save Note clicked with empty text */}
+              {saveError && (
+                <p style={{
+                  fontSize: "13px",
+                  color: "#c62828",
+                  background: "#fff5f5",
+                  border: "1px solid #e57373",
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  margin: 0,
+                }}>
+                  ⚠ {saveError}
+                </p>
+              )}
+
               <div className="tn-new-note-actions">
-                <button className="tn-cancel-btn" onClick={() => setShowNewNote(false)}>Cancel</button>
-                <button className="tn-save-note-btn" onClick={handleAddNote} disabled={saving}>
-                  {saving ? "Saving..." : "Save Note"}
-                </button>
+                <button className="tn-cancel-btn" onClick={closeForm}>Cancel</button>
+                <button className="tn-save-note-btn" onClick={handleAddNote}>Save Note</button>
               </div>
             </div>
           )}
 
           {/* Notes list */}
-          {loading ? (
-            <div style={{ textAlign: "center", padding: 40, color: "#9b82cc" }}>
-              🌿 Loading notes...
-            </div>
-          ) : (
-            <div className="tn-notes-list">
-              {filtered.length === 0 ? (
-                <div style={{ textAlign: "center", padding: 40, color: "#c0b0d8" }}>
-                  No notes found. Click "+ New Note" to add one!
-                </div>
-              ) : (
-                filtered.map((note, i) => (
-                  <div key={i} className="tn-note-card">
-                    <div className="tn-note-left">
-                      <div className={`tn-note-initials ${initialsColors[i % initialsColors.length]}`}>
-                        {note.userID?.fullName?.split(" ").map(n => n[0]).join("").slice(0, 2) || "??"}
-                      </div>
-                    </div>
-                    <div className="tn-note-content">
-                      <div className="tn-note-header-row">
-                        <span className="tn-note-patient">{note.userID?.fullName || "Unknown"}</span>
-                        <span className="tn-note-date">
-                          {new Date(note.createdAt).toLocaleDateString("en-US", {
-                            month: "short", day: "2-digit", year: "numeric"
-                          }).toUpperCase()}
-                        </span>
-                      </div>
-                      <p className="tn-note-text">{note.noteText}</p>
-                      <div className="tn-note-tags">
-                        {note.tags?.map((tag, j) => (
-                          <span key={j} className={`ct-tag ${tagColorMap[tag] || "tag-blue"}`}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
+          <div className="tn-notes-list">
+            {filtered.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#9b82cc", fontSize: "14px" }}>
+                No notes found.
+              </div>
+            ) : (
+              filtered.map((note) => (
+                <div key={note.id} className="tn-note-card">
+                  <div className="tn-note-left">
+                    <div className={`tn-note-initials ${note.patientColor}`}>
+                      {note.patientInitials}
                     </div>
                   </div>
-                ))
-              )}
-            </div>
-          )}
+                  <div className="tn-note-content">
+                    <div className="tn-note-header-row">
+                      <span className="tn-note-patient">{note.patientName}</span>
+                      <span className="tn-note-date">{note.date}</span>
+                    </div>
+                    <p className="tn-note-text">{note.text}</p>
+                    <div className="tn-note-tags">
+                      {note.tags.map((tag, i) => (
+                        <span key={i} className={`ct-tag ${note.tagColors[i]}`}>{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
 
-          {/* Load more */}
           <div className="tn-load-more-wrap">
-            <p className="tp-showing">SHOWING {filtered.length} OF {notes.length} NOTES</p>
+            <button className="tp-load-more-btn">Load older notes</button>
           </div>
 
         </div>
 
-        {/* Footer */}
         <footer className="db-footer">
           <div className="db-footer-links">
             <a href="#" className="db-footer-link">PRIVACY POLICY</a>
@@ -263,7 +292,7 @@ export default function TherapistNotes() {
             <a href="#" className="db-footer-link">SUPPORT</a>
             <a href="#" className="db-footer-link">CONTACT</a>
           </div>
-          <p className="db-footer-copy">© 2024 MOODY. DESIGNED FOR YOUR DIGITAL COCOON.</p>
+          <p className="db-footer-copy">© 2026 MOODY.</p>
         </footer>
 
       </main>

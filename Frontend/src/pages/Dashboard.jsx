@@ -1,99 +1,50 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { createMoodEntry, getMoodEntries } from "../services/moodService";
-import { getRandomQuote } from "../services/quoteService";
-import { getCurrentUser, logout } from "../services/authService";
 
 const moods = [
-  { emoji: "😄", label: "VERY HAPPY", value: 5, key: "Very Happy" },
-  { emoji: "😊", label: "HAPPY",      value: 4, key: "Happy"      },
-  { emoji: "😌", label: "CALM",       value: 3, key: "Calm"       },
-  { emoji: "😐", label: "NEUTRAL",    value: 2, key: "Neutral"    },
-  { emoji: "😢", label: "SAD",        value: 1, key: "Sad"        },
-  { emoji: "😰", label: "VERY SAD",   value: 0, key: "Very Sad"   },
+  { emoji: "😄", label: "VERY HAPPY", value: 5 },
+  { emoji: "😊", label: "HAPPY",      value: 4 },
+  { emoji: "😌", label: "CALM",       value: 3 },
+  { emoji: "😐", label: "NEUTRAL",    value: 2 },
+  { emoji: "😢", label: "SAD",        value: 1 },
+  { emoji: "😰", label: "VERY SAD",   value: 0 },
+];
+
+const moodTrend = [
+  { day: "MON", height: 55, color: "#c4aef0" },
+  { day: "TUE", height: 40, color: "#c4aef0" },
+  { day: "WED", height: 70, color: "#c4aef0" },
+  { day: "THU", height: 90, color: "#7c5cbf" },
+  { day: "FRI", height: 50, color: "#c4aef0" },
+  { day: "SAT", height: 35, color: "#c4aef0" },
+  { day: "SUN", height: 25, color: "#c4aef0" },
+];
+
+const recentReflections = [
+  { emoji: "😌", time: "Today, 9:30 AM",      text: "Feeling energetic in the park. The cris..." },
+  { emoji: "😊", time: "Yesterday, 10:15 PM", text: "Meditation helped. I feel much more c..." },
+  { emoji: "😢", time: "Apr 7, 2:45 PM",      text: "A bit overwhelmed. Trying to focus on or..." },
 ];
 
 const calendarDays = ["M","T","W","T","F","S","S"];
 const calendarNums = [
-  [28,29,30,31,1,2,3],
-  [4,5,6,7,8,9,10],
+  [30, 31, 1,  2,  3,  4,  5],
+  [6,  7,  8,  9,  10, 11, 12],
 ];
+const moodDots = { 1:3, 2:2, 4:3, 5:2, 6:3, 7:1, 8:3 };
 
 export default function Dashboard() {
-  const navigate = useNavigate();
-  const user = getCurrentUser();
-
   const [selectedMood, setSelectedMood] = useState(2);
   const [reflection, setReflection]     = useState("");
   const [saved, setSaved]               = useState(false);
-  const [saving, setSaving]             = useState(false);
-  const [saveError, setSaveError]       = useState("");
-  const [entries, setEntries]           = useState([]);
-  const [quote, setQuote]               = useState({ quoteText: "Your emotions are like waves, they come and go. You are the ocean, vast and enduring.", authorName: "Moody" });
+  const navigate = useNavigate();
 
-  // Load mood entries and random quote on mount
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [entriesData, quoteData] = await Promise.all([
-          getMoodEntries(),
-          getRandomQuote(),
-        ]);
-        setEntries(entriesData);
-        if (quoteData) setQuote(quoteData);
-      } catch (err) {
-        console.error("Failed to load data:", err);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleSave = async () => {
+  const handleSave = () => {
     if (selectedMood === null) return;
-    try {
-      setSaving(true);
-      setSaveError("");
-      const moodData = {
-        moodLabel: moods[selectedMood].key,
-        moodScore: moods[selectedMood].value,
-        reflection,
-        entryDate: new Date(),
-      };
-      const newEntry = await createMoodEntry(moodData);
-      setEntries([newEntry, ...entries]);
-      setSaved(true);
-      setReflection("");
-      setTimeout(() => setSaved(false), 2500);
-    } catch (err) {
-      setSaveError(err.response?.data?.message || "Failed to save entry.");
-    } finally {
-      setSaving(false);
-    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+    setReflection("");
   };
-
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
-  // Calculate stats from real entries
-  const streak  = entries.length > 0 ? Math.min(entries.length, 12) : 0;
-  const topMood = entries.length > 0
-    ? Object.entries(
-        entries.reduce((acc, e) => {
-          acc[e.moodLabel] = (acc[e.moodLabel] || 0) + 1;
-          return acc;
-        }, {})
-      ).sort((a, b) => b[1] - a[1])[0][0]
-    : "Calm";
-
-  const recentEntries = entries.slice(0, 3);
-
-  const moodTrend = entries.slice(0, 7).reverse().map((e, i) => ({
-    day: ["MON","TUE","WED","THU","FRI","SAT","SUN"][i] || `D${i}`,
-    height: (e.moodScore / 5) * 90 + 10,
-    color: e.moodScore >= 4 ? "#7c5cbf" : e.moodScore >= 2 ? "#c4aef0" : "#e8e0f8",
-  }));
 
   return (
     <div className="db-root">
@@ -103,14 +54,14 @@ export default function Dashboard() {
         <div className="db-nav-inner">
           <Link to="/" className="db-logo">Moody</Link>
           <div className="db-nav-links">
-            <Link to="/dashboard"  className="db-nav-link db-nav-active">Dashboard</Link>
-            <Link to="/calendar"   className="db-nav-link">Calendar</Link>
-            <Link to="/report"     className="db-nav-link">Monthly Report</Link>
-            <Link to="/profile"    className="db-nav-link">Profile</Link>
+            <Link to="/dashboard" className="db-nav-link db-nav-active">Dashboard</Link>
+            <Link to="/calendar"  className="db-nav-link">Calendar</Link>
+            <Link to="/report"    className="db-nav-link">Monthly Report</Link>
+            <Link to="/profile"   className="db-nav-link">Profile</Link>
           </div>
           <div className="db-nav-right">
             <button className="db-icon-btn">🔔</button>
-            <button className="db-icon-btn" onClick={handleLogout} title="Logout">↪</button>
+            <button className="db-icon-btn" onClick={() => navigate("/")}>↪</button>
             <div className="db-avatar">🧑</div>
           </div>
         </div>
@@ -124,7 +75,7 @@ export default function Dashboard() {
 
           {/* Welcome */}
           <div className="db-welcome">
-            <p className="db-welcome-label">WELCOME BACK, {user?.fullName?.split(" ")[0]?.toUpperCase() || "USER"}</p>
+            <p className="db-welcome-label">WELCOME BACK, SARAH</p>
             <h1 className="db-welcome-title">
               How does your<br />
               <em className="db-welcome-em">inner world</em> look today?
@@ -160,15 +111,10 @@ export default function Dashboard() {
               />
               <div className="db-reflection-footer">
                 <span className="db-char-count">{reflection.length} / 500 CHARACTERS</span>
-                <button
-                  className="db-save-btn"
-                  onClick={handleSave}
-                  disabled={saving}
-                >
-                  {saving ? "Saving..." : saved ? "✓ Saved!" : "Save Entry"}
+                <button className="db-save-btn" onClick={handleSave}>
+                  {saved ? "✓ Saved!" : "Save Entry"}
                 </button>
               </div>
-              {saveError && <p style={{ color: "#e57373", fontSize: 12, marginTop: 6 }}>{saveError}</p>}
             </div>
           </div>
 
@@ -179,17 +125,12 @@ export default function Dashboard() {
               <span className="db-trend-label">LAST 7 DAYS</span>
             </div>
             <div className="db-trend-chart">
-              {(moodTrend.length > 0 ? moodTrend : [
-                { day:"MON", height:55, color:"#c4aef0" },
-                { day:"TUE", height:40, color:"#c4aef0" },
-                { day:"WED", height:70, color:"#c4aef0" },
-                { day:"THU", height:90, color:"#7c5cbf" },
-                { day:"FRI", height:50, color:"#c4aef0" },
-                { day:"SAT", height:35, color:"#c4aef0" },
-                { day:"SUN", height:25, color:"#c4aef0" },
-              ]).map((bar, i) => (
+              {moodTrend.map((bar, i) => (
                 <div key={i} className="db-bar-col">
-                  <div className="db-bar" style={{ height: `${bar.height}px`, background: bar.color }} />
+                  <div
+                    className="db-bar"
+                    style={{ height: `${bar.height}px`, background: bar.color }}
+                  />
                   <span className="db-bar-day">{bar.day}</span>
                 </div>
               ))}
@@ -202,11 +143,13 @@ export default function Dashboard() {
 
           {/* Daily Quote */}
           <div className="db-quote-card">
-            <p className="db-quote-text">"{quote.quoteText}"</p>
+            <p className="db-quote-text">
+              "Your emotions are like waves, they come and go. You are the ocean, vast and enduring."
+            </p>
             <span className="db-quote-attr">— DAILY REFLECTION</span>
           </div>
 
-          {/* Therapist */}
+          {/* Therapist card — NO message button */}
           <div className="db-therapist-card">
             <div className="db-therapist-left">
               <div className="db-therapist-avatar">👩‍⚕️</div>
@@ -215,13 +158,12 @@ export default function Dashboard() {
                 <p className="db-therapist-name">Dr. Elena Smith</p>
               </div>
             </div>
-            <button className="db-therapist-msg-btn">💬</button>
           </div>
 
           {/* Mini Calendar */}
           <div className="db-calendar-card">
             <div className="db-calendar-header">
-              <span className="db-calendar-month">November 2024</span>
+              <span className="db-calendar-month">April 2026</span>
               <div className="db-calendar-nav">
                 <button className="db-cal-nav-btn">‹</button>
                 <button className="db-cal-nav-btn">›</button>
@@ -233,8 +175,17 @@ export default function Dashboard() {
               ))}
               {calendarNums.map((week, wi) =>
                 week.map((num, di) => (
-                  <div key={`${wi}-${di}`} className={`db-cal-day ${num === 9 ? "db-cal-today" : ""} ${num < 4 && wi === 0 ? "db-cal-dim" : ""}`}>
+                  <div
+                    key={`${wi}-${di}`}
+                    className={`db-cal-day ${num === 9 ? "db-cal-today" : ""} ${(num === 30 || num === 31) && wi === 0 ? "db-cal-dim" : ""}`}
+                  >
                     <span>{num}</span>
+                    {moodDots[num] && (
+                      <span className="db-cal-dot" style={{
+                        background: moodDots[num] === 3 ? "#7c5cbf" :
+                                    moodDots[num] === 2 ? "#f5c842" : "#e57373"
+                      }} />
+                    )}
                   </div>
                 ))
               )}
@@ -245,11 +196,11 @@ export default function Dashboard() {
           <div className="db-stats-row">
             <div className="db-stat-card">
               <span className="db-stat-label">STREAK</span>
-              <span className="db-stat-num">{streak} <span className="db-stat-unit">days</span></span>
+              <span className="db-stat-num">30 <span className="db-stat-unit">days</span></span>
             </div>
             <div className="db-stat-card">
               <span className="db-stat-label">ENTRIES</span>
-              <span className="db-stat-num">{entries.length}</span>
+              <span className="db-stat-num">30</span>
             </div>
           </div>
 
@@ -257,7 +208,7 @@ export default function Dashboard() {
           <div className="db-topmood-card">
             <div>
               <span className="db-stat-label">TOP MOOD</span>
-              <p className="db-topmood-text">{topMood}</p>
+              <p className="db-topmood-text">Calm</p>
             </div>
             <span className="db-topmood-emoji">😌</span>
           </div>
@@ -268,21 +219,15 @@ export default function Dashboard() {
               <h3 className="db-reflections-title">Recent Reflections</h3>
               <Link to="/calendar" className="db-view-all">View All</Link>
             </div>
-            {recentEntries.length > 0 ? (
-              recentEntries.map((r, i) => (
-                <div key={i} className="db-reflection-item">
-                  <span className="db-ref-emoji">😌</span>
-                  <div className="db-ref-content">
-                    <span className="db-ref-time">{new Date(r.entryDate).toLocaleDateString()}</span>
-                    <p className="db-ref-text">{r.reflection || r.moodLabel}</p>
-                  </div>
+            {recentReflections.map((r, i) => (
+              <div key={i} className="db-reflection-item">
+                <span className="db-ref-emoji">{r.emoji}</span>
+                <div className="db-ref-content">
+                  <span className="db-ref-time">{r.time}</span>
+                  <p className="db-ref-text">{r.text}</p>
                 </div>
-              ))
-            ) : (
-              <p style={{ fontSize: 13, color: "#c0b0d8", textAlign: "center", padding: "16px 0" }}>
-                No reflections yet. Start logging your mood! 🌿
-              </p>
-            )}
+              </div>
+            ))}
           </div>
 
         </div>
@@ -296,7 +241,7 @@ export default function Dashboard() {
           <a href="#" className="db-footer-link">SUPPORT</a>
           <a href="#" className="db-footer-link">CONTACT</a>
         </div>
-        <p className="db-footer-copy">© 2024 MOODY. DESIGNED FOR YOUR DIGITAL COCOON.</p>
+        <p className="db-footer-copy">© 2026 MOODY.</p>
       </footer>
 
     </div>
