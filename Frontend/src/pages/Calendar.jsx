@@ -1,73 +1,164 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { getMoodEntries } from "../services/moodService";
 
 const DAYS_LABELS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
-// April 2026 starts on Wednesday → 2 nulls at start
-const calendarWeeks = [
-  [null, null, 1,  2,  3,  4,  5 ],
-  [6,    7,    8,  9,  10, 11, 12],
-  [13,   14,   15, 16, 17, 18, 19],
-  [20,   21,   22, 23, 24, 25, 26],
-  [27,   28,   29, 30, null, null, null],
-];
-
-const moodMap = {
-  1:  { emoji: "😊" }, 2:  { emoji: "😄" }, 3:  { emoji: "😌" },
-  4:  { emoji: "😊" }, 5:  { emoji: "😔" }, 6:  { emoji: "😌" },
-  7:  { emoji: "😄" }, 8:  { emoji: "😊" }, 9:  { emoji: "😐" },
-  10: { emoji: "😌" }, 11: { emoji: "😔" }, 12: { emoji: "😊" },
-  13: { emoji: "😄" }, 14: { emoji: "😌" }, 15: { emoji: "😐" },
-  16: { emoji: "😊" }, 17: { emoji: "😄" }, 18: { emoji: "😔" },
-  19: { emoji: "😌" }, 20: { emoji: "😊" }, 21: { emoji: "😄" },
-  22: { emoji: "😌" }, 23: { emoji: "😐" }, 24: { emoji: "😊" },
-  25: { emoji: "😄" }, 26: { emoji: "😌" }, 27: { emoji: "😔" },
-  28: { emoji: "😊" }, 29: { emoji: "😄" }, 30: { emoji: "😌" },
+const moodEmojis = {
+  "Very Happy": "😄",
+  "Happy":      "😊",
+  "Calm":       "😌",
+  "Neutral":    "😐",
+  "Sad":        "😔",
+  "Very Sad":   "😰",
 };
 
-const entryDetails = {
-  1:  { feeling: "Happy",      emoji: "😊", reflection: '"Started the month with good energy. Had a productive morning and felt motivated."',      created: "08:30 AM", updated: "09:00 PM", locked: true  },
-  2:  { feeling: "Very Happy", emoji: "😄", reflection: '"Great day with friends. Laughed a lot and felt really connected."',                       created: "09:00 AM", updated: "10:00 PM", locked: true  },
-  3:  { feeling: "Calm",       emoji: "😌", reflection: '"A quiet peaceful day. Read a book and enjoyed the silence."',                              created: "08:00 AM", updated: "08:30 PM", locked: true  },
-  4:  { feeling: "Happy",      emoji: "😊", reflection: '"Good progress on my project today. Feeling accomplished."',                                created: "09:15 AM", updated: "09:45 PM", locked: true  },
-  5:  { feeling: "Sad",        emoji: "😔", reflection: '"Feeling a little down today. Missing home and feeling tired."',                            created: "10:00 AM", updated: "11:00 PM", locked: true  },
-  6:  { feeling: "Calm",       emoji: "😌", reflection: '"Slow morning but recovered well. Evening walk helped a lot."',                             created: "08:45 AM", updated: "09:15 PM", locked: true  },
-  7:  { feeling: "Very Happy", emoji: "😄", reflection: '"Finished a big assignment. Feeling free and relieved."',                                   created: "09:00 AM", updated: "10:30 PM", locked: true  },
-  8:  { feeling: "Happy",      emoji: "😊", reflection: '"Had a great conversation with my therapist. Feeling understood."',                         created: "08:00 AM", updated: "09:00 PM", locked: true  },
-  9:  { feeling: "Neutral",    emoji: "😐", reflection: '"Normal day. Nothing special but nothing bad either."',                                     created: "09:30 AM", updated: "10:00 PM", locked: true  },
-  10: { feeling: "Calm",       emoji: "😌", reflection: '"Focused and relaxed. Got a lot of work done quietly."',                                    created: "08:15 AM", updated: "08:45 PM", locked: true  },
-  11: { feeling: "Sad",        emoji: "😔", reflection: '"Rough day. Felt overwhelmed with everything at once."',                                    created: "10:30 AM", updated: "11:30 PM", locked: true  },
-  12: { feeling: "Happy",      emoji: "😊", reflection: '"Better than yesterday. Small wins matter a lot."',                                         created: "09:00 AM", updated: "09:30 PM", locked: true  },
-  13: { feeling: "Very Happy", emoji: "😄", reflection: '"Spent the day outside. Fresh air made everything feel better."',                           created: "08:30 AM", updated: "10:00 PM", locked: true  },
-  14: { feeling: "Calm",       emoji: "😌", reflection: '"A gentle day. Listened to music and cooked at home."',                                     created: "09:00 AM", updated: "09:30 PM", locked: true  },
-  15: { feeling: "Neutral",    emoji: "😐", reflection: '"Midway through the month. Feeling okay, nothing more."',                                   created: "09:45 AM", updated: "10:15 PM", locked: true  },
-  16: { feeling: "Happy",      emoji: "😊", reflection: '"Good study session today. Feeling on track."',                                             created: "08:00 AM", updated: "09:00 PM", locked: true  },
-  17: { feeling: "Very Happy", emoji: "😄", reflection: '"Celebrated a small achievement with family. So grateful."',                               created: "09:15 AM", updated: "10:45 PM", locked: true  },
-  18: { feeling: "Sad",        emoji: "😔", reflection: '"Tired and a bit anxious. Need more rest this week."',                                      created: "10:00 AM", updated: "11:00 PM", locked: true  },
-  19: { feeling: "Calm",       emoji: "😌", reflection: '"Rested well. Felt centered and at peace with myself."',                                    created: "08:30 AM", updated: "09:00 PM", locked: true  },
-  20: { feeling: "Happy",      emoji: "😊", reflection: '"Productive morning. Things are moving in the right direction."',                           created: "08:00 AM", updated: "09:30 PM", locked: true  },
-  21: { feeling: "Very Happy", emoji: "😄", reflection: '"One of the best days this month. Everything just clicked."',                               created: "09:00 AM", updated: "10:00 PM", locked: true  },
-  22: { feeling: "Calm",       emoji: "😌", reflection: '"Quiet evening with tea. Grateful for simple moments."',                                    created: "08:45 AM", updated: "09:15 PM", locked: true  },
-  23: { feeling: "Neutral",    emoji: "😐", reflection: '"Average day. Nothing to complain about really."',                                          created: "09:30 AM", updated: "10:00 PM", locked: true  },
-  24: { feeling: "Happy",      emoji: "😊", reflection: '"Connected with an old friend today. It was really nice."',                                 created: "08:15 AM", updated: "09:45 PM", locked: true  },
-  25: { feeling: "Very Happy", emoji: "😄", reflection: '"Feeling grateful and positive about the future ahead."',                                   created: "09:00 AM", updated: "10:30 PM", locked: true  },
-  26: { feeling: "Calm",       emoji: "😌", reflection: '"Peaceful day. Journaled and reflected on the month so far."',                              created: "08:30 AM", updated: "09:00 PM", locked: false },
-  27: { feeling: "Sad",        emoji: "😔", reflection: '"End of week tiredness. Need to recharge this weekend."',                                   created: "10:00 AM", updated: "10:30 PM", locked: false },
-  28: { feeling: "Happy",      emoji: "😊", reflection: '"Weekend! Rested well and feeling recharged and ready."',                                   created: "09:00 AM", updated: "10:00 PM", locked: false },
-  29: { feeling: "Very Happy", emoji: "😄", reflection: '"Great end to the month. Proud of how far I have come."',                                   created: "08:30 AM", updated: "09:30 PM", locked: false },
-  30: { feeling: "Calm",       emoji: "😌", reflection: '"Last day of April. Feeling calm and ready for May."',                                      created: "09:00 AM", updated: "09:30 PM", locked: false },
+// Hardcoded April 2026 demo data — shown when no real entries exist for that month
+const aprilFallback = {
+  1:  { emoji:"😊", feeling:"Happy",      reflection:'"Started the month with good energy. Had a productive morning and felt motivated."',      created:"08:30 AM", updated:"09:00 PM", locked:true },
+  2:  { emoji:"😄", feeling:"Very Happy", reflection:'"Great day with friends. Laughed a lot and felt really connected."',                       created:"09:00 AM", updated:"10:00 PM", locked:true },
+  3:  { emoji:"😌", feeling:"Calm",       reflection:'"A quiet peaceful day. Read a book and enjoyed the silence."',                              created:"08:00 AM", updated:"08:30 PM", locked:true },
+  4:  { emoji:"😊", feeling:"Happy",      reflection:'"Good progress on my project today. Feeling accomplished."',                                created:"09:15 AM", updated:"09:45 PM", locked:true },
+  5:  { emoji:"😔", feeling:"Sad",        reflection:'"Feeling a little down today. Missing home and feeling tired."',                            created:"10:00 AM", updated:"11:00 PM", locked:true },
+  6:  { emoji:"😌", feeling:"Calm",       reflection:'"Slow morning but recovered well. Evening walk helped a lot."',                             created:"08:45 AM", updated:"09:15 PM", locked:true },
+  7:  { emoji:"😄", feeling:"Very Happy", reflection:'"Finished a big assignment. Feeling free and relieved."',                                   created:"09:00 AM", updated:"10:30 PM", locked:true },
+  8:  { emoji:"😊", feeling:"Happy",      reflection:'"Had a great conversation with my therapist. Feeling understood."',                         created:"08:00 AM", updated:"09:00 PM", locked:true },
+  9:  { emoji:"😐", feeling:"Neutral",    reflection:'"Normal day. Nothing special but nothing bad either."',                                     created:"09:30 AM", updated:"10:00 PM", locked:true },
+  10: { emoji:"😌", feeling:"Calm",       reflection:'"Focused and relaxed. Got a lot of work done quietly."',                                    created:"08:15 AM", updated:"08:45 PM", locked:true },
+  11: { emoji:"😔", feeling:"Sad",        reflection:'"Rough day. Felt overwhelmed with everything at once."',                                    created:"10:30 AM", updated:"11:30 PM", locked:true },
+  12: { emoji:"😊", feeling:"Happy",      reflection:'"Better than yesterday. Small wins matter a lot."',                                         created:"09:00 AM", updated:"09:30 PM", locked:true },
+  13: { emoji:"😄", feeling:"Very Happy", reflection:'"Spent the day outside. Fresh air made everything feel better."',                           created:"08:30 AM", updated:"10:00 PM", locked:true },
+  14: { emoji:"😌", feeling:"Calm",       reflection:'"A gentle day. Listened to music and cooked at home."',                                     created:"09:00 AM", updated:"09:30 PM", locked:true },
+  15: { emoji:"😐", feeling:"Neutral",    reflection:'"Midway through the month. Feeling okay, nothing more."',                                   created:"09:45 AM", updated:"10:15 PM", locked:true },
+  16: { emoji:"😊", feeling:"Happy",      reflection:'"Good study session today. Feeling on track."',                                             created:"08:00 AM", updated:"09:00 PM", locked:true },
+  17: { emoji:"😄", feeling:"Very Happy", reflection:'"Celebrated a small achievement with family. So grateful."',                               created:"09:15 AM", updated:"10:45 PM", locked:true },
+  18: { emoji:"😔", feeling:"Sad",        reflection:'"Tired and a bit anxious. Need more rest this week."',                                      created:"10:00 AM", updated:"11:00 PM", locked:true },
+  19: { emoji:"😌", feeling:"Calm",       reflection:'"Rested well. Felt centered and at peace with myself."',                                    created:"08:30 AM", updated:"09:00 PM", locked:true },
+  20: { emoji:"😊", feeling:"Happy",      reflection:'"Productive morning. Things are moving in the right direction."',                           created:"08:00 AM", updated:"09:30 PM", locked:true },
+  21: { emoji:"😄", feeling:"Very Happy", reflection:'"One of the best days this month. Everything just clicked."',                               created:"09:00 AM", updated:"10:00 PM", locked:true },
+  22: { emoji:"😌", feeling:"Calm",       reflection:'"Quiet evening with tea. Grateful for simple moments."',                                    created:"08:45 AM", updated:"09:15 PM", locked:true },
+  23: { emoji:"😐", feeling:"Neutral",    reflection:'"Average day. Nothing to complain about really."',                                          created:"09:30 AM", updated:"10:00 PM", locked:true },
+  24: { emoji:"😊", feeling:"Happy",      reflection:'"Connected with an old friend today. It was really nice."',                                 created:"08:15 AM", updated:"09:45 PM", locked:true },
+  25: { emoji:"😄", feeling:"Very Happy", reflection:'"Feeling grateful and positive about the future ahead."',                                   created:"09:00 AM", updated:"10:30 PM", locked:true },
+  26: { emoji:"😌", feeling:"Calm",       reflection:'"Peaceful day. Journaled and reflected on the month so far."',                              created:"08:30 AM", updated:"09:00 PM", locked:true },
+  27: { emoji:"😔", feeling:"Sad",        reflection:'"End of week tiredness. Need to recharge this weekend."',                                   created:"10:00 AM", updated:"10:30 PM", locked:true },
+  28: { emoji:"😊", feeling:"Happy",      reflection:'"Weekend! Rested well and feeling recharged and ready."',                                   created:"09:00 AM", updated:"10:00 PM", locked:true },
+  29: { emoji:"😄", feeling:"Very Happy", reflection:'"Great end to the month. Proud of how far I have come."',                                   created:"08:30 AM", updated:"09:30 PM", locked:true },
+  30: { emoji:"😌", feeling:"Calm",       reflection:'"Last day of April. Feeling calm and ready for May."',                                      created:"09:00 AM", updated:"09:30 PM", locked:true },
 };
 
-const monthSpark = [
-  { h: 70, c: "#7c5cbf" }, { h: 85, c: "#7c5cbf" },
-  { h: 45, c: "#e57373" }, { h: 90, c: "#5b3fa0" },
-  { h: 60, c: "#c4aef0" }, { h: 75, c: "#7c5cbf" },
-  { h: 55, c: "#7c5cbf" }, { h: 80, c: "#7c5cbf" },
+// Build calendar weeks for any month/year
+function buildCalendarWeeks(year, month) {
+  const firstDay    = new Date(year, month, 1).getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const startPad    = firstDay === 0 ? 6 : firstDay - 1; // Mon-start
+
+  const days = [...Array(startPad).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  const weeks = [];
+  for (let i = 0; i < days.length; i += 7) {
+    weeks.push(days.slice(i, i + 7).concat(Array(7).fill(null)).slice(0, 7));
+  }
+  return weeks;
+}
+
+const MONTH_NAMES = [
+  "January","February","March","April","May","June",
+  "July","August","September","October","November","December"
 ];
 
 export default function Calendar() {
-  const [selectedDay, setSelectedDay] = useState(26);
-  const entry = entryDetails[selectedDay] || null;
+  const now = new Date();
+  const [viewYear,  setViewYear]  = useState(now.getFullYear());
+  const [viewMonth, setViewMonth] = useState(now.getMonth()); // 0-indexed
+
+  const [moodMap,      setMoodMap]      = useState({}); // { day: { emoji, entry } }
+  const [selectedDay,  setSelectedDay]  = useState(null);
+  const [loading,      setLoading]      = useState(true);
+
+  const calendarWeeks = buildCalendarWeeks(viewYear, viewMonth);
+
+  // ── Load moods from backend whenever month/year changes ──
+  useEffect(() => {
+    loadMoods();
+  }, [viewYear, viewMonth]);
+
+  const loadMoods = async () => {
+    setLoading(true);
+    try {
+      const data = await getMoodEntries();
+
+      // Build a map: day number → mood entry (for current viewMonth/viewYear)
+      const map = {};
+      data.forEach(entry => {
+        const d = new Date(entry.entryDate);
+        if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {
+          const day = d.getDate();
+          map[day] = {
+            emoji:      moodEmojis[entry.moodLabel] || "😊",
+            feeling:    entry.moodLabel,
+            reflection: entry.reflection || "",
+            created:    new Date(entry.createdAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+            updated:    new Date(entry.updatedAt).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" }),
+            locked:     true,
+            entryId:    entry._id,
+          };
+        }
+      });
+
+      // If viewing April 2026 and no real entries → use hardcoded demo data
+      const isApril2026 = viewYear === 2026 && viewMonth === 3;
+      const finalMap = (isApril2026 && Object.keys(map).length === 0)
+        ? aprilFallback
+        : map;
+
+      setMoodMap(finalMap);
+
+      // Auto-select today if it has an entry
+      const todayDay = now.getDate();
+      if (viewYear === now.getFullYear() && viewMonth === now.getMonth() && finalMap[todayDay]) {
+        setSelectedDay(todayDay);
+      } else {
+        setSelectedDay(null);
+      }
+    } catch (err) {
+      console.error("Failed to load moods:", err);
+      // On error — if April 2026, still show demo data
+      if (viewYear === 2026 && viewMonth === 3) setMoodMap(aprilFallback);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToPrevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+    setSelectedDay(null);
+  };
+
+  const goToNextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+    setSelectedDay(null);
+  };
+
+  const entry       = selectedDay ? moodMap[selectedDay] : null;
+  const totalLogged = Object.keys(moodMap).length;
+
+  // Monthly spark bars based on real data
+  const sparkBars = (() => {
+    const entries = Object.values(moodMap);
+    if (entries.length === 0) return Array(8).fill({ h: 30, c: "#e0d8f0" });
+    return Array(8).fill(null).map((_, i) => {
+      const e = entries[i];
+      if (!e) return { h: 20, c: "#e0d8f0" };
+      const score = ["Very Sad","Sad","Neutral","Calm","Happy","Very Happy"].indexOf(e.feeling);
+      return {
+        h: Math.max(15, ((score + 1) / 6) * 100),
+        c: score >= 3 ? "#7c5cbf" : score === 2 ? "#f5c842" : "#e57373",
+      };
+    });
+  })();
 
   return (
     <div className="cal-root">
@@ -83,7 +174,6 @@ export default function Calendar() {
             <Link to="/profile"   className="db-nav-link">Profile</Link>
           </div>
           <div className="db-nav-right">
-            <button className="db-icon-btn">🔔</button>
             <div className="db-avatar">🧑</div>
           </div>
         </div>
@@ -94,19 +184,24 @@ export default function Calendar() {
 
         {/* ── LEFT ── */}
         <div className="cal-left">
+
           <div className="cal-header">
             <h1 className="cal-title">
               Emotional <em className="cal-title-em">Archive</em>
             </h1>
-            <p className="cal-subtitle">Your mood history for every day this month.</p>
+            <p className="cal-subtitle">
+              Your mood history for every day this month.
+            </p>
           </div>
 
-          {/* Controls — ONLY MONTH button, no WEEK */}
+          {/* Month nav — MONTH button only, no WEEK */}
           <div className="cal-controls">
             <div className="cal-month-nav">
-              <button className="cal-nav-btn">‹</button>
-              <span className="cal-month-label">April 2026</span>
-              <button className="cal-nav-btn">›</button>
+              <button className="cal-nav-btn" onClick={goToPrevMonth}>‹</button>
+              <span className="cal-month-label">
+                {MONTH_NAMES[viewMonth]} {viewYear}
+              </span>
+              <button className="cal-nav-btn" onClick={goToNextMonth}>›</button>
             </div>
             <div className="cal-view-toggle">
               <button className="cal-toggle-btn cal-toggle-active">MONTH</button>
@@ -120,25 +215,35 @@ export default function Calendar() {
                 <span key={d} className="cal-day-label">{d}</span>
               ))}
             </div>
-            {calendarWeeks.map((week, wi) => (
-              <div key={wi} className="cal-week-row">
-                {week.map((day, di) => {
-                  if (!day) return <div key={di} className="cal-cell cal-cell-empty" />;
-                  const mood  = moodMap[day];
-                  const isSel = day === selectedDay;
-                  return (
-                    <div
-                      key={di}
-                      className={`cal-cell ${isSel ? "cal-cell-selected" : ""}`}
-                      onClick={() => setSelectedDay(day)}
-                    >
-                      <span className="cal-cell-num">{day}</span>
-                      {mood && <span className="cal-cell-emoji">{mood.emoji}</span>}
-                    </div>
-                  );
-                })}
+
+            {loading ? (
+              <div style={{ padding: "40px", textAlign: "center", color: "#9b82cc", fontSize: "14px" }}>
+                Loading your moods...
               </div>
-            ))}
+            ) : (
+              calendarWeeks.map((week, wi) => (
+                <div key={wi} className="cal-week-row">
+                  {week.map((day, di) => {
+                    if (!day) return <div key={di} className="cal-cell cal-cell-empty" />;
+                    const mood  = moodMap[day];
+                    const isSel = day === selectedDay;
+                    const isToday = day === now.getDate() &&
+                                    viewMonth === now.getMonth() &&
+                                    viewYear  === now.getFullYear();
+                    return (
+                      <div
+                        key={di}
+                        className={`cal-cell ${isSel ? "cal-cell-selected" : ""} ${isToday && !isSel ? "cal-cell-today" : ""}`}
+                        onClick={() => setSelectedDay(day)}
+                      >
+                        <span className="cal-cell-num">{day}</span>
+                        {mood && <span className="cal-cell-emoji">{mood.emoji}</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -146,11 +251,12 @@ export default function Calendar() {
         <div className="cal-right">
           {entry ? (
             <>
+              {/* Day Detail */}
               <div className="cal-detail-card">
                 <div className="cal-detail-header">
                   <div>
                     <p className="cal-detail-date-label">Day {selectedDay}</p>
-                    <p className="cal-detail-month">April 2026</p>
+                    <p className="cal-detail-month">{MONTH_NAMES[viewMonth]} {viewYear}</p>
                   </div>
                   {entry.locked && <span className="cal-locked-badge">LOCKED</span>}
                 </div>
@@ -167,7 +273,12 @@ export default function Calendar() {
 
                 <div className="cal-detail-reflection">
                   <span className="cal-detail-section-label">≡ REFLECTION</span>
-                  <p className="cal-reflection-text">{entry.reflection}</p>
+                  <p className="cal-reflection-text">
+                    {entry.reflection
+                      ? `"${entry.reflection}"`
+                      : <span style={{ color: "#c0b0d8", fontStyle: "normal" }}>No reflection written.</span>
+                    }
+                  </p>
                 </div>
 
                 <div className="cal-divider" />
@@ -188,21 +299,44 @@ export default function Calendar() {
                 </p>
               </div>
 
+              {/* Monthly Spark */}
               <div className="cal-spark-card">
                 <h3 className="cal-spark-title">Monthly Spark</h3>
                 <div className="cal-spark-bars">
-                  {monthSpark.map((b, i) => (
+                  {sparkBars.map((b, i) => (
                     <div key={i} className="cal-spark-bar"
                       style={{ height: `${b.h}%`, background: b.c }} />
                   ))}
                 </div>
-                <p className="cal-spark-note">84% positive mood this month. Keep going! 🌿</p>
+                <p className="cal-spark-note">
+                  {totalLogged} {totalLogged === 1 ? "day" : "days"} logged this month. Keep going! 🌿
+                </p>
               </div>
             </>
           ) : (
             <div className="cal-no-entry">
               <span>📅</span>
-              <p>Select a day to see your mood entry.</p>
+              <p>
+                {selectedDay && !loading
+                  ? "No mood logged for this day."
+                  : "Click on any day to see your mood entry."
+                }
+              </p>
+              {selectedDay && !loading && !entry && (
+                <Link to="/dashboard" style={{
+                  marginTop: "12px",
+                  display: "inline-block",
+                  padding: "10px 22px",
+                  background: "linear-gradient(135deg, #7c5cbf, #5b3fa0)",
+                  color: "#fff",
+                  borderRadius: "12px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  textDecoration: "none",
+                }}>
+                  Log Today's Mood →
+                </Link>
+              )}
             </div>
           )}
         </div>
