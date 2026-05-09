@@ -16,10 +16,9 @@ const moodEmojis = {
 };
 
 const navItems = [
-  { icon: "⊞", label: "Overview",  path: "/therapist",          active: false },
-  { icon: "👤", label: "Patients",  path: "/therapist/patients", active: true  },
-  { icon: "📋", label: "Notes",     path: "/therapist/notes",    active: false },
-  { icon: "⚙",  label: "Settings", path: "#",                   active: false },
+  { icon: "⊞", label: "Overview", path: "/therapist",          active: false },
+  { icon: "👤", label: "Patients", path: "/therapist/patients", active: true  },
+  { icon: "📋", label: "Notes",    path: "/therapist/notes",    active: false },
 ];
 
 function buildPath(pts) {

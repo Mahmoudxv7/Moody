@@ -6,10 +6,16 @@ import { getCurrentUser, logout } from "../services/authService";
 const filters = ["All Users", "High Sensitivity", "New Reflections", "Inactive > 3 days"];
 
 const navItems = [
-  { icon: "⊞", label: "Overview",  path: "/therapist",          active: false },
-  { icon: "👤", label: "Patients",  path: "/therapist/patients", active: true  },
-  { icon: "📋", label: "Notes",     path: "/therapist/notes",    active: false },
-  { icon: "⚙",  label: "Settings", path: "#",                   active: false },
+  { icon: "⊞", label: "Overview", path: "/therapist",          active: false },
+  { icon: "👤", label: "Patients", path: "/therapist/patients", active: true  },
+  { icon: "📋", label: "Notes",    path: "/therapist/notes",    active: false },
+];
+
+const mockPatients = [
+  { _id: "1", userID: { fullName: "Sarah Ahmed"  }, lastMood: "Happy",   lastActive: "Today, 9:30 AM",    reflection: "Feeling energetic today. The morning walk really helped my mood." },
+  { _id: "2", userID: { fullName: "Omar Malik"   }, lastMood: "Neutral", lastActive: "Yesterday",         reflection: "Normal day. Nothing special but nothing bad either." },
+  { _id: "3", userID: { fullName: "Layla Karimi" }, lastMood: "Sad",     lastActive: "2 days ago",        reflection: "Feeling a bit down today. Need some rest and quiet time." },
+  { _id: "4", userID: { fullName: "Youssef Amin" }, lastMood: "Calm",    lastActive: "Today, 2:15 PM",    reflection: "Peaceful day. Journaled and reflected on the week." },
 ];
 
 export default function TherapistPatients() {
@@ -25,7 +31,7 @@ export default function TherapistPatients() {
     const fetchPatients = async () => {
       try {
         const data = await getAssignedPatients();
-        setPatients(data);
+        setPatients(data.length > 0 ? data : mockPatients);
       } catch (err) {
         console.error("Failed to load patients:", err);
       } finally {

@@ -5,10 +5,9 @@ import { getNotes } from "../services/noteService";
 import { getCurrentUser, logout } from "../services/authService";
 
 const navItems = [
-  { icon: "⊞", label: "Overview",  path: "/therapist",          active: true  },
-  { icon: "👤", label: "Patients",  path: "/therapist/patients", active: false },
-  { icon: "📋", label: "Notes",     path: "/therapist/notes",    active: false },
-  { icon: "⚙",  label: "Settings", path: "#",                   active: false },
+  { icon: "⊞", label: "Overview", path: "/therapist",          active: true  },
+  { icon: "👤", label: "Patients", path: "/therapist/patients", active: false },
+  { icon: "📋", label: "Notes",    path: "/therapist/notes",    active: false },
 ];
 
 export default function TherapistDashboard() {

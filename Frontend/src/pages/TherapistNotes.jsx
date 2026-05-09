@@ -164,7 +164,7 @@ export default function TherapistNotes() {
             <p className="tn-subtitle">Review and manage documentation across your patient list.</p>
           </div>
 
-          {/* Search + filter */}
+          {/* Search only */}
           <div className="tn-toolbar">
             <div className="tp-search-wrap" style={{ flex: 1 }}>
               <span className="tp-search-icon">🔍</span>
@@ -176,20 +176,6 @@ export default function TherapistNotes() {
                 onChange={e => setSearch(e.target.value)}
               />
             </div>
-            <div className="tn-filter-wrap">
-              <select
-                className="tn-filter-select"
-                value={filterPatient}
-                onChange={e => setFilterPatient(e.target.value)}
-              >
-                <option>All Patients</option>
-                <option>Sarah Jenkins</option>
-                <option>Marcus Thorne</option>
-                <option>Elena Rodriguez</option>
-                <option>David Chen</option>
-              </select>
-            </div>
-            <button className="tn-sort-btn">▼ Sort</button>
           </div>
 
           {/* ── NEW NOTE FORM ── */}
